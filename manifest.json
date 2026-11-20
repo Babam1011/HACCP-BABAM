@@ -1,0 +1,22 @@
+{
+  "name": "HACCP BABAM",
+  "short_name": "HACCP BABAM",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#047857",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "./LOGO BABAM.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "./LOGO BABAM.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

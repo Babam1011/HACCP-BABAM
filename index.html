@@ -1,0 +1,1762 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HACCP BABAM">
+    <link rel="icon" type="image/jpeg" href="LOGO BABAM.jpg">
+    <link rel="apple-touch-icon" href="LOGO BABAM.jpg">
+    <link rel="manifest" href="manifest.json">
+    <title>HACCP BABAM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+        @media print {
+            body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            main { max-width: 100% !important; padding: 0 !important; }
+            .shadow-sm, .shadow-md, .shadow-lg { box-shadow: none !important; }
+            .border { border-color: #cbd5e1 !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; }
+            th { background-color: #f1f5f9 !important; font-weight: bold; }
+            .non-conforme-row { background-color: #fef2f2 !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans pb-24">
+
+    <!-- Écran de connexion Équipe -->
+    <div id="auth-screen" class="no-print min-h-screen flex items-center justify-center p-4 bg-slate-100">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 border border-slate-200 space-y-5">
+            <div class="flex flex-col items-center text-center space-y-2">
+                <img src="LOGO BABAM.jpg" alt="Logo BABAM"
+                    class="w-20 h-20 rounded-full object-cover border-2 border-emerald-600 shadow-sm bg-white" />
+                <h1 class="text-2xl font-extrabold text-slate-800">HACCP BABAM</h1>
+                <p class="text-xs text-slate-500">Connexion réservée à l'équipe. PROJET PRIVE</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-email" class="block text-sm font-semibold text-slate-700 mb-1">Adresse e-mail équipe</label>
+                    <input type="email" id="login-email" required autocomplete="email" placeholder="equipe@babam-brunch.fr"
+                        class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div>
+                    <label for="login-password" class="block text-sm font-semibold text-slate-700 mb-1">Mot de passe</label>
+                    <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
+                        class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                </div>
+
+                <div id="login-error" class="hidden bg-red-50 border border-red-300 text-red-700 text-xs font-semibold p-3 rounded-xl"></div>
+
+                <button type="submit" id="login-submit-btn"
+                    class="w-full bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-bold py-3.5 px-6 rounded-xl text-base shadow-sm transition">
+                    🔐 Se connecter
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application principale (visible après connexion) -->
+    <div id="app-shell" class="hidden">
+
+        <!-- En-tête -->
+        <header class="no-print bg-emerald-700 text-white p-4 shadow-md sticky top-0 z-20 flex justify-between items-center gap-2">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="LOGO BABAM.jpg" alt="Logo BABAM"
+                    class="w-11 h-11 rounded-full object-cover border-2 border-emerald-200 bg-white shrink-0 shadow-sm" />
+                <div class="min-w-0">
+                    <h1 class="text-xl font-bold tracking-tight truncate">HACCP BABAM</h1>
+                    <p class="text-xs text-emerald-100 truncate" id="current-date"></p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <span id="sync-status" class="hidden sm:inline-block bg-emerald-800 text-emerald-100 text-xs px-2.5 py-1 rounded-full font-medium">
+                    ● Cloud Connecté
+                </span>
+                <button type="button" onclick="logoutTeam()"
+                    class="bg-emerald-900 hover:bg-emerald-950 text-emerald-100 text-xs font-bold px-3 py-1.5 rounded-full transition">
+                    Déconnexion
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-3xl mx-auto p-4">
+
+            <!-- ========================================== -->
+            <!-- ONGLET 1 : TEMPÉRATURES & RAPPORT          -->
+            <!-- ========================================== -->
+            <div id="tab-temperatures" class="space-y-6">
+                <section class="no-print bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        🌡️ Nouveau relevé de température
+                    </h2>
+
+                    <form id="temp-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Équipement / Zone</label>
+                            <select id="equipment" required class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                                <option value="frigo_1" data-min="0" data-max="4" data-range="0°C à +4°C">❄️ Frigo 1 (Frigo + Congélateur) [0°C à +4°C]</option>
+                                <option value="congel_1" data-min="-25" data-max="-18" data-range="≤ -18°C">🧊 Congélateur 1 (Frigo + Congélateur) [-18°C max]</option>
+                                <option value="frigo_2" data-min="0" data-max="4" data-range="0°C à +4°C">❄️ Frigo 2 (Frigo + Congélateur) [0°C à +4°C]</option>
+                                <option value="congel_2" data-min="-25" data-max="-18" data-range="≤ -18°C">🧊 Congélateur 2 (Frigo + Congélateur) [-18°C max]</option>
+                                <option value="congel_comptoirs" data-min="-25" data-max="-18" data-range="≤ -18°C">🧊 Congélateur Comptoirs [-18°C max]</option>
+                                <option value="vitrine_gateaux" data-min="0" data-max="4" data-range="0°C à +4°C">🍰 Vitrine Gâteaux [0°C à +4°C]</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Température relevée (°C)</label>
+                                <div class="relative">
+                                    <input type="number" step="0.1" id="temperature" required placeholder="Ex: 3.2"
+                                        class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-xl font-bold focus:ring-2 focus:ring-emerald-500">
+                                    <span class="absolute right-4 top-3.5 text-slate-400 font-bold text-lg">°C</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Équipier / Responsable</label>
+                                <input type="text" id="operator-temp" required placeholder="Votre prénom"
+                                    class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                        </div>
+
+                        <div id="alert-box" class="hidden bg-red-50 border-l-4 border-red-600 p-4 rounded-r-xl space-y-3">
+                            <div class="flex items-center gap-2 text-red-800 font-bold">
+                                <span>⚠️ ALERTE : Température hors norme réglementaire !</span>
+                            </div>
+                            <p id="alert-message" class="text-sm text-red-700"></p>
+                            <div>
+                                <label class="block text-sm font-bold text-red-900 mb-1">Action corrective obligatoire (DDPP) :</label>
+                                <select id="corrective-action" class="w-full p-3 bg-white border border-red-300 rounded-lg text-sm font-medium text-slate-800">
+                                    <option value="">-- Choisir l'action menée --</option>
+                                    <option value="Porte mal fermée - Fermeture et contrôle dans 30 min">Porte mal fermée - Fermeture et recontrôle dans 30 min</option>
+                                    <option value="Ajustement du thermostat - Surveillance renforcée">Ajustement du thermostat - Surveillance renforcée</option>
+                                    <option value="Transfert des produits dans un autre frigo conforme">Transfert des produits dans un autre frigo conforme</option>
+                                    <option value="Remise en chauffe immédiate (>63°C)">Remise en chauffe immédiate (> +63°C)</option>
+                                    <option value="Destruction des produits à risque">Destruction des produits à risque (jetés)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-sm transition">
+                            ✅ Enregistrer le relevé
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Générateur de rapport & Historique Températures -->
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 space-y-4">
+                    <div class="print-only border-b-2 border-slate-800 pb-3 mb-4">
+                        <h1 class="text-xl font-bold uppercase tracking-wide" id="print-title">Rapport de Contrôle des Températures — HACCP BABAM</h1>
+                        <p class="text-xs text-slate-600 mt-1" id="print-meta"></p>
+                    </div>
+
+                    <div class="no-print flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                        <h2 class="text-lg font-bold text-slate-800">📋 Relevés & Rapport de contrôle</h2>
+                        <button onclick="generateTempReport()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+                            📄 Générer le rapport PDF
+                        </button>
+                    </div>
+
+                    <div class="no-print bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Raccourci période</label>
+                                <select id="filter-period" onchange="applyPeriodPreset()" class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                                    <option value="all">Tout l'historique</option>
+                                    <option value="today">Aujourd'hui</option>
+                                    <option value="7d">7 derniers jours</option>
+                                    <option value="30d">30 derniers jours</option>
+                                    <option value="custom">Plage personnalisée</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Équipement</label>
+                                <select id="filter-equipment" onchange="renderTempView()" class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                                    <option value="all">Tous les équipements</option>
+                                    <option value="frigo_1">❄️ Frigo 1 (Frigo + Congélateur)</option>
+                                    <option value="congel_1">🧊 Congélateur 1 (Frigo + Congélateur)</option>
+                                    <option value="frigo_2">❄️ Frigo 2 (Frigo + Congélateur)</option>
+                                    <option value="congel_2">🧊 Congélateur 2 (Frigo + Congélateur)</option>
+                                    <option value="congel_comptoirs">🧊 Congélateur Comptoirs</option>
+                                    <option value="vitrine_gateaux">🍰 Vitrine Gâteaux</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Conformité</label>
+                                <select id="filter-compliance" onchange="renderTempView()" class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                                    <option value="all">Tous les relevés</option>
+                                    <option value="non_conforme">⚠️ Non conformes uniquement</option>
+                                    <option value="conforme">✅ Conformes uniquement</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-200">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">📅 Date de début (Du)</label>
+                                <input type="date" id="filter-date-start" onchange="onCustomDateChange()"
+                                    class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">📅 Date de fin (Au)</label>
+                                <input type="date" id="filter-date-end" onchange="onCustomDateChange()"
+                                    class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="button" onclick="resetTempFilters()" class="text-xs text-slate-600 hover:text-slate-900 font-semibold underline">
+                                Réinitialiser les filtres
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="temp-summary" class="grid grid-cols-3 gap-2 text-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div>
+                            <div class="text-xs text-slate-500">Relevés affichés</div>
+                            <div id="stat-total" class="text-lg font-extrabold text-slate-800">0</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">Conformes</div>
+                            <div id="stat-ok" class="text-lg font-extrabold text-emerald-700">0</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-500">Écarts / Alertes</div>
+                            <div id="stat-ko" class="text-lg font-extrabold text-red-600">0</div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 border-b border-slate-300">
+                                    <th class="p-2.5 font-bold">Date / Heure</th>
+                                    <th class="p-2.5 font-bold">Équipement</th>
+                                    <th class="p-2.5 font-bold">Seuil</th>
+                                    <th class="p-2.5 font-bold">Relevé</th>
+                                    <th class="p-2.5 font-bold">Statut</th>
+                                    <th class="p-2.5 font-bold">Opérateur</th>
+                                    <th class="p-2.5 font-bold">Action corrective</th>
+                                </tr>
+                            </thead>
+                            <tbody id="temp-table-body" class="divide-y divide-slate-200">
+                                <tr>
+                                    <td colspan="7" class="text-slate-400 text-center py-6">Chargement des relevés...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 2 : ÉTIQUETTES & DLC (OCR + DRIVE)  -->
+            <!-- ========================================== -->
+            <div id="tab-labels" class="no-print hidden space-y-6">
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        🏷️ Nouvelle étiquette / Ouverture produit
+                    </h2>
+
+                    <form id="label-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Nom ou marque du produit / préparation</label>
+                            <input type="text" id="product-name" required placeholder="Ex: Saumon fumé, Crème montée, Guacamole..."
+                                class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">DLC secondaire après ouverture</label>
+                                <select id="dlc-days" class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                                    <option value="1">J+1 (24h - Préparations très sensibles)</option>
+                                    <option value="2">J+2 (48h)</option>
+                                    <option value="3" selected>J+3 (Standard produits ouverts)</option>
+                                    <option value="5">J+5 (Sauces / Condiments)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">DLC lue / notée sur emballage (optionnel)</label>
+                                <input type="date" id="detected-dlc-date"
+                                    class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Équipier</label>
+                            <input type="text" id="operator-label" required placeholder="Votre prénom"
+                                class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">📸 Photo de l'étiquette (avec lecture auto gratuite)</label>
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-emerald-400 rounded-xl cursor-pointer bg-emerald-50/50 hover:bg-emerald-50 transition">
+                                <div id="label-photo-placeholder" class="flex flex-col items-center justify-center pt-5 pb-6 text-emerald-700">
+                                    <span class="text-3xl mb-1">📷</span>
+                                    <p class="text-sm font-bold">Appuyer pour prendre en photo l'étiquette</p>
+                                    <p class="text-xs text-emerald-600">Détection auto des dates/textes (vérifiez toujours)</p>
+                                </div>
+                                <img id="label-photo-preview" class="hidden h-28 object-contain rounded-lg" />
+                                <input id="label-photo" type="file" accept="image/*" capture="environment" class="hidden" />
+                            </label>
+                            <p id="label-ocr-status" class="text-xs text-slate-500 mt-1.5"></p>
+                        </div>
+
+                        <button type="submit" id="submit-label-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-sm transition">
+                            🏷️ Enregistrer la traçabilité
+                        </button>
+                    </form>
+                </section>
+
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-slate-800">📦 Produits ouverts & DLC en cours</h2>
+                        <span class="text-xs text-slate-500">Astuce : bouton ☁️ Drive pour archiver la photo</span>
+                    </div>
+                    <div id="labels-list" class="space-y-3">
+                        <p class="text-slate-400 text-sm text-center py-6">Chargement des étiquettes...</p>
+                    </div>
+                </section>
+
+                <!-- Sauvegarde ZIP vers Drive & Purge des DLC archivées cochées -->
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">🗂️ Sauvegarde ZIP & Purge DLC archivées</h2>
+                            <p class="text-xs text-slate-500">Cochez les DLC archivées (« Fini ») à inclure dans l'archive .zip pour Google Drive avant purge.</p>
+                        </div>
+                        <span id="dlc-archived-badge" class="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full self-start sm:self-auto">
+                            0 archivée
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Filtre d'affichage des DLC archivées</label>
+                                <select id="dlc-purge-scope" onchange="onDlcScopeChange()" class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                                    <option value="all_archived">Toutes les DLC archivées</option>
+                                    <option value="older_6m">Archivées de plus de 6 mois</option>
+                                    <option value="older_30d">Archivées de plus de 30 jours</option>
+                                </select>
+                            </div>
+                            <div class="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
+                                DLC cochées : <strong id="dlc-purge-target-count">0</strong> (dont <strong id="dlc-purge-photo-count">0</strong> photos)
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="setAllDlcSelection(true)" class="text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-1.5 px-2.5 rounded-lg">
+                                    ☑️ Tout cocher
+                                </button>
+                                <button type="button" onclick="setAllDlcSelection(false)" class="text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-1.5 px-2.5 rounded-lg">
+                                    ☐ Tout décocher
+                                </button>
+                            </div>
+                            <span class="text-[11px] text-slate-500">Seules les cases cochées seront compressées puis purgées</span>
+                        </div>
+
+                        <div id="dlc-archived-selection-list" class="space-y-2 max-h-64 overflow-y-auto pt-1">
+                            <p class="text-slate-400 text-xs text-center py-3">Aucune DLC archivée.</p>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-2.5 pt-2 border-t border-slate-200">
+                            <button type="button" id="backup-dlc-btn" onclick="backupDlcToDrive()" class="flex-1 bg-sky-700 hover:bg-sky-800 text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-sm transition">
+                                🗜️ 1. Créer archive .zip Drive
+                            </button>
+                            <button type="button" id="purge-dlc-btn" onclick="purgeDlcFromFirestore()" disabled
+                                class="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-500 text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-sm transition">
+                                🗑️ 2. Purger DLC cochées
+                            </button>
+                        </div>
+                        <p id="dlc-purge-status-msg" class="text-xs text-slate-500">
+                            Étape 1 requise : cochez les DLC archivées puis créez l'archive .zip pour Google Drive afin de débloquer la purge.
+                        </p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 3 : TRAÇABILITÉ RÉCEPTION & LOTS    -->
+            <!-- ========================================== -->
+            <div id="tab-traceability" class="no-print hidden space-y-6">
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        📦 Réception marchandises & Traçabilité lots
+                    </h2>
+
+                    <form id="trace-form" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Fournisseur</label>
+                                <input type="text" id="trace-supplier" required placeholder="Ex: Marée fraîche, Ferme locale..."
+                                    class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Produit / Denrée</label>
+                                <input type="text" id="trace-product" required placeholder="Ex: Œufs plein air, Saumon, Avocats..."
+                                    class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">N° de lot / Bon</label>
+                                <input type="text" id="trace-lot" placeholder="Ex: LOT-4829"
+                                    class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">DLC / DDM réception</label>
+                                <input type="date" id="trace-dlc"
+                                    class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">Contrôle réception</label>
+                                <select id="trace-status" class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                                    <option value="Accepté">✅ Accepté (Conforme)</option>
+                                    <option value="Refusé">❌ Refusé (Non conforme)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">Équipier ayant réceptionné</label>
+                            <input type="text" id="operator-trace" required placeholder="Votre prénom"
+                                class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-xl text-base font-medium focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">📸 Photo étiquette lot ou bon de livraison (OCR auto)</label>
+                            <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-emerald-400 rounded-xl cursor-pointer bg-emerald-50/50 hover:bg-emerald-50 transition">
+                                <div id="trace-photo-placeholder" class="flex flex-col items-center justify-center pt-5 pb-6 text-emerald-700">
+                                    <span class="text-3xl mb-1">📷</span>
+                                    <p class="text-sm font-bold">Appuyer pour photographier le lot ou bon</p>
+                                    <p class="text-xs text-emerald-600">Pré-remplit date/lot si lisible</p>
+                                </div>
+                                <img id="trace-photo-preview" class="hidden h-28 object-contain rounded-lg" />
+                                <input id="trace-photo" type="file" accept="image/*" capture="environment" class="hidden" />
+                            </label>
+                            <p id="trace-ocr-status" class="text-xs text-slate-500 mt-1.5"></p>
+                        </div>
+
+                        <button type="submit" id="submit-trace-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold py-4 px-6 rounded-xl text-lg shadow-sm transition">
+                            📦 Enregistrer la réception
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Sauvegarde ZIP Drive & Purge Firestore avec sélection cochée -->
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800">📑 Historique de traçabilité & Purge</h2>
+                            <p class="text-xs text-slate-500">Cochez les réceptions à inclure dans l'archive .zip pour Google Drive avant purge.</p>
+                        </div>
+                        <span id="trace-count-badge" class="text-xs font-bold bg-slate-100 text-slate-700 px-3 py-1 rounded-full self-start sm:self-auto">
+                            0 entrée
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-1">Filtre d'affichage des réceptions</label>
+                                <select id="purge-scope" onchange="onTraceScopeChange()" class="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-medium">
+                                    <option value="all">Toutes les réceptions</option>
+                                    <option value="older_6m">Plus de 6 mois (produits frais)</option>
+                                    <option value="older_30d">Plus de 30 jours</option>
+                                </select>
+                            </div>
+                            <div class="text-xs text-slate-600 bg-white p-2.5 rounded-lg border border-slate-200">
+                                Entrées cochées : <strong id="purge-target-count">0</strong> (dont <strong id="purge-photo-count">0</strong> photos)
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                            <div class="flex gap-2">
+                                <button type="button" onclick="setAllTraceSelection(true)" class="text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-1.5 px-2.5 rounded-lg">
+                                    ☑️ Tout cocher
+                                </button>
+                                <button type="button" onclick="setAllTraceSelection(false)" class="text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-1.5 px-2.5 rounded-lg">
+                                    ☐ Tout décocher
+                                </button>
+                            </div>
+                            <span class="text-[11px] text-slate-500">Seules les cases cochées seront compressées puis purgées</span>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-2.5 pt-1">
+                            <button type="button" id="backup-trace-btn" onclick="backupTraceToDrive()" class="flex-1 bg-sky-700 hover:bg-sky-800 text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-sm transition">
+                                🗜️ 1. Créer archive .zip Drive
+                            </button>
+                            <button type="button" id="purge-trace-btn" onclick="purgeTraceFromFirestore()" disabled
+                                class="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-300 disabled:text-slate-500 text-white text-sm font-bold py-2.5 px-4 rounded-xl shadow-sm transition">
+                                🗑️ 2. Purger entrées cochées
+                            </button>
+                        </div>
+                        <p id="purge-status-msg" class="text-xs text-slate-500">
+                            Étape 1 requise : cochez les entrées puis créez l'archive .zip pour Google Drive afin de débloquer la purge.
+                        </p>
+                    </div>
+
+                    <div id="trace-list" class="space-y-3">
+                        <p class="text-slate-400 text-sm text-center py-6">Chargement de la traçabilité...</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- ONGLET 4 : PLAN DE NETTOYAGE (PND)         -->
+            <!-- ========================================== -->
+            <div id="tab-cleaning" class="no-print hidden space-y-6">
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        🧽 Plan de Nettoyage & Désinfection (PND)
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-4">Cochez les zones nettoyées au fur et à mesure de la journée ou après le service du brunch.</p>
+
+                    <div class="space-y-3">
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">Postes de travail & Plan de coupe</div>
+                                <div class="text-xs text-slate-500">Détartrage / Détergent bactéricide (Quotidien)</div>
+                            </div>
+                            <button onclick="validateCleaning('Plans de travail et postes de coupe')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                                ✅ Fait
+                            </button>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">Trancheuse & Blenders / Mixeurs à jus</div>
+                                <div class="text-xs text-slate-500">Démontage complet et nettoyage (Après chaque service)</div>
+                            </div>
+                            <button onclick="validateCleaning('Trancheuse et Blenders jus')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                                ✅ Fait
+                            </button>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">Machine à café & Buses vapeur</div>
+                                <div class="text-xs text-slate-500">Nettoyage backflush + Purge buses (Quotidien)</div>
+                            </div>
+                            <button onclick="validateCleaning('Machine à café et buses vapeur')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                                ✅ Fait
+                            </button>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">Chambres froides & Frigos positifs</div>
+                                <div class="text-xs text-slate-500">Lavage des sols et grilles (Hebdomadaire)</div>
+                            </div>
+                            <button onclick="validateCleaning('Chambres froides et Frigos')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                                ✅ Fait
+                            </button>
+                        </div>
+
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm">Poubelles et zone de déchets</div>
+                                <div class="text-xs text-slate-500">Lavage et désinfection des bacs (Quotidien)</div>
+                            </div>
+                            <button onclick="validateCleaning('Poubelles et zone de déchets')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition">
+                                ✅ Fait
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800 mb-4">📋 Historique des nettoyages validés</h2>
+                    <div id="cleaning-list" class="space-y-3">
+                        <p class="text-slate-400 text-sm text-center py-6">Chargement...</p>
+                    </div>
+                </section>
+            </div>
+
+        </main>
+
+        <!-- Modale photo -->
+        <div id="photo-modal" onclick="this.classList.add('hidden')" class="no-print hidden fixed inset-0 bg-black/85 z-50 flex flex-col items-center justify-center p-4">
+            <img id="modal-img" class="max-h-[80vh] max-w-full rounded-xl shadow-2xl border-2 border-white" />
+            <p class="text-white text-sm mt-4 font-semibold bg-white/20 px-4 py-2 rounded-full">Touchez n'importe où pour fermer</p>
+        </div>
+
+        <!-- Barre de navigation basse -->
+        <nav class="no-print fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around py-2 px-1 shadow-lg z-20">
+            <button id="nav-temperatures" onclick="switchTab('temperatures')" class="flex flex-col items-center text-emerald-700 font-bold text-xs p-1 w-1/4">
+                <span class="text-xl">🌡️</span>
+                <span>Températures</span>
+            </button>
+            <button id="nav-labels" onclick="switchTab('labels')" class="flex flex-col items-center text-slate-400 hover:text-slate-600 text-xs p-1 w-1/4">
+                <span class="text-xl">🏷️</span>
+                <span>DLC</span>
+            </button>
+            <button id="nav-traceability" onclick="switchTab('traceability')" class="flex flex-col items-center text-slate-400 hover:text-slate-600 text-xs p-1 w-1/4">
+                <span class="text-xl">📦</span>
+                <span>Traçabilité</span>
+            </button>
+            <button id="nav-cleaning" onclick="switchTab('cleaning')" class="flex flex-col items-center text-slate-400 hover:text-slate-600 text-xs p-1 w-1/4">
+                <span class="text-xl">🧽</span>
+                <span>Nettoyage</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- Script Firebase & Logique Métier -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // HACCAP BABAM
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQoL-Dc4CdaaGnilX9PaPrAsoGfOk1fyM",
+            authDomain: "haccp-babam.firebaseapp.com",
+            projectId: "haccp-babam",
+            storageBucket: "haccp-babam.firebasestorage.app",
+            messagingSenderId: "1007235459869",
+            appId: "1:1007235459869:web:1ddfef77fb49939b0d8ff4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const syncBadge = document.getElementById('sync-status');
+        syncBadge.textContent = "● Cloud Connecté";
+        syncBadge.className = "hidden sm:inline-block bg-emerald-800 text-emerald-100 text-xs px-2.5 py-1 rounded-full font-medium";
+
+        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('fr-FR', dateOptions);
+
+        // ==========================================
+        // AUTHENTIFICATION ÉQUIPE (E-MAIL + MOT DE PASSE)
+        // ==========================================
+        const authScreen = document.getElementById('auth-screen');
+        const appShell = document.getElementById('app-shell');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const loginSubmitBtn = document.getElementById('login-submit-btn');
+
+        let listenersStarted = false;
+        const firestoreUnsubscribers = [];
+
+        function detachFirestoreListeners() {
+            while (firestoreUnsubscribers.length > 0) {
+                const unsub = firestoreUnsubscribers.pop();
+                if (typeof unsub === 'function') unsub();
+            }
+            listenersStarted = false;
+        }
+
+        function formatAuthError(code) {
+            if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
+                return "Adresse e-mail ou mot de passe incorrect.";
+            }
+            if (code === 'auth/too-many-requests') {
+                return "Trop de tentatives. Patientez quelques minutes avant de réessayer.";
+            }
+            if (code === 'auth/network-request-failed') {
+                return "Problème de connexion réseau. Vérifiez votre accès internet.";
+            }
+            return "Connexion impossible. Vérifiez vos identifiants et l'activation E-mail/Mot de passe dans Firebase.";
+        }
+
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            loginError.classList.add('hidden');
+            loginError.textContent = "";
+
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            loginSubmitBtn.disabled = true;
+            loginSubmitBtn.textContent = "⏳ Connexion...";
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                document.getElementById('login-password').value = "";
+            } catch (err) {
+                loginError.textContent = formatAuthError(err.code);
+                loginError.classList.remove('hidden');
+            } finally {
+                loginSubmitBtn.disabled = false;
+                loginSubmitBtn.textContent = "🔐 Se connecter";
+            }
+        });
+
+        window.logoutTeam = async function() {
+            await signOut(auth);
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authScreen.classList.add('hidden');
+                appShell.classList.remove('hidden');
+                if (!listenersStarted) {
+                    startFirestoreListeners();
+                    listenersStarted = true;
+                }
+            } else {
+                detachFirestoreListeners();
+                appShell.classList.add('hidden');
+                authScreen.classList.remove('hidden');
+            }
+        });
+
+        // ==========================================
+        // GESTION DES ONGLETS & MODALE
+        // ==========================================
+        window.switchTab = function(tabName) {
+            ['temperatures', 'labels', 'traceability', 'cleaning'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+                document.getElementById('nav-' + t).className = "flex flex-col items-center text-slate-400 hover:text-slate-600 text-xs p-1 w-1/4";
+            });
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            document.getElementById('nav-' + tabName).className = "flex flex-col items-center text-emerald-700 font-bold text-xs p-1 w-1/4";
+        };
+
+        window.openPhotoModal = function(base64Img) {
+            document.getElementById('modal-img').src = base64Img;
+            document.getElementById('photo-modal').classList.remove('hidden');
+        };
+
+        // ==========================================
+        // SAUVEGARDE / PARTAGE ARCHIVE .ZIP VERS DRIVE
+        // ==========================================
+        async function base64ToFile(base64Img, filename) {
+            const res = await fetch(base64Img);
+            const blob = await res.blob();
+            return new File([blob], filename, { type: 'image/jpeg' });
+        }
+
+        function triggerBlobDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        async function createAndExportZipArchive(records, prefix, shareTitle, shareText) {
+            if (!window.JSZip) {
+                throw new Error("JSZip non chargé.");
+            }
+            const dateStamp = new Date().toISOString().slice(0, 10);
+            const zip = new JSZip();
+            const folderName = `${prefix}_${dateStamp}`;
+            const targetFolder = zip.folder(folderName);
+            const photosFolder = targetFolder.folder("photos");
+
+            let photoCount = 0;
+            const cleanRecords = [];
+
+            for (let i = 0; i < records.length; i++) {
+                const { photo, ...rest } = records[i];
+                let photoRelPath = null;
+
+                if (photo) {
+                    const rawName = rest.productName || rest.product || prefix;
+                    const safeName = rawName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+                    const rawDate = rest.openedAt || rest.receivedAt || dateStamp;
+                    const dPart = String(rawDate).slice(0, 10);
+                    const photoFileName = `${prefix}_${safeName}_${dPart}_${i + 1}.jpg`;
+                    const base64Data = photo.includes(',') ? photo.split(',')[1] : photo;
+                    photosFolder.file(photoFileName, base64Data, { base64: true });
+                    photoRelPath = `photos/${photoFileName}`;
+                    photoCount += 1;
+                }
+
+                cleanRecords.push({
+                    ...rest,
+                    hasPhoto: Boolean(photo),
+                    photoFile: photoRelPath
+                });
+            }
+
+            const archivePayload = {
+                exportedAt: new Date().toISOString(),
+                count: cleanRecords.length,
+                photoCount,
+                records: cleanRecords
+            };
+
+            targetFolder.file(`${prefix}_archive_${dateStamp}.json`, JSON.stringify(archivePayload, null, 2));
+
+            const zipBlob = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: { level: 6 }
+            });
+
+            const zipFilename = `${folderName}.zip`;
+            const zipFile = new File([zipBlob], zipFilename, { type: "application/zip" });
+
+            if (navigator.canShare && navigator.canShare({ files: [zipFile] })) {
+                try {
+                    await navigator.share({
+                        files: [zipFile],
+                        title: shareTitle,
+                        text: shareText
+                    });
+                    return { photoCount, zipFilename };
+                } catch (e) {
+                    if (e.name === 'AbortError') return { photoCount, zipFilename };
+                }
+            }
+
+            triggerBlobDownload(zipBlob, zipFilename);
+            return { photoCount, zipFilename };
+        }
+
+        window.savePhotoToDrive = async function(base64Img, filename) {
+            if (!base64Img) {
+                alert("Aucune photo enregistrée sur cet élément.");
+                return;
+            }
+            const file = await base64ToFile(base64Img, filename);
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: filename,
+                        text: 'Archive photo HACCP BABAM à enregistrer dans Google Drive'
+                    });
+                    return;
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                }
+            }
+
+            const link = document.createElement('a');
+            link.href = base64Img;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            alert("Photo téléchargée (" + filename + "). Ouvrez Google Drive puis importez ce fichier dans votre dossier HACCP.");
+        };
+
+        // ==========================================
+        // COMPRESSION PHOTO + LECTURE OCR GRATUITE
+        // ==========================================
+        function compressImageFile(file, maxWidth = 900, quality = 0.72) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const scale = Math.min(1, maxWidth / img.width);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = Math.round(img.width * scale);
+                        canvas.height = Math.round(img.height * scale);
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function extractDateFromText(text) {
+            const match4 = text.match(/\b(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})\b/);
+            if (match4) {
+                const [, d, m, y] = match4;
+                if (+m >= 1 && +m <= 12 && +d >= 1 && +d <= 31) {
+                    return `${y}-${m}-${d}`;
+                }
+            }
+            const match2 = text.match(/\b(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{2})\b/);
+            if (match2) {
+                const [, d, m, y2] = match2;
+                const y = parseInt(y2, 10) >= 70 ? `19${y2}` : `20${y2}`;
+                if (+m >= 1 && +m <= 12 && +d >= 1 && +d <= 31) {
+                    return `${y}-${m}-${d}`;
+                }
+            }
+            return null;
+        }
+
+        function extractLotFromText(text) {
+            const lotMatch = text.match(/\b(?:LOT|L)\s*[:#\-]?\s*([A-Z0-9\-]{3,16})\b/i);
+            return lotMatch ? lotMatch[1] : null;
+        }
+
+        async function runOcrOnImage(base64Img, statusEl, onDetected) {
+            if (!window.Tesseract) {
+                statusEl.textContent = "Lecture auto indisponible hors-ligne sans cache OCR.";
+                return;
+            }
+            statusEl.textContent = "🔍 Analyse de la photo en cours (vérifiez toujours la saisie)...";
+            try {
+                const result = await Tesseract.recognize(base64Img, 'fra+eng');
+                const rawText = (result?.data?.text || '').trim();
+                if (!rawText) {
+                    statusEl.textContent = "Aucun texte net détecté — remplissez manuellement.";
+                    return;
+                }
+                const firstLines = rawText.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 3).join(' • ');
+                const detectedDate = extractDateFromText(rawText);
+                const detectedLot = extractLotFromText(rawText);
+
+                if (onDetected) onDetected({ rawText, firstLines, detectedDate, detectedLot });
+
+                const hints = [];
+                if (detectedDate) hints.push(`Date détectée : ${detectedDate}`);
+                if (detectedLot) hints.push(`Lot détecté : ${detectedLot}`);
+                statusEl.textContent = hints.length
+                    ? `✨ Suggestion OCR (${hints.join(' | ')}) — à vérifier avant validation.`
+                    : `📝 Texte lu : "${firstLines.slice(0, 80)}" — vérifiez les champs.`;
+            } catch (e) {
+                statusEl.textContent = "Lecture auto impossible sur cette image — saisie manuelle active.";
+            }
+        }
+
+        // ==========================================
+        // MODULE 1 : TEMPÉRATURES & RAPPORT DÉDIÉ
+        // ==========================================
+        const eqSelect = document.getElementById('equipment');
+        const tempInput = document.getElementById('temperature');
+        const alertBox = document.getElementById('alert-box');
+        const alertMsg = document.getElementById('alert-message');
+        const correctiveSelect = document.getElementById('corrective-action');
+
+        let allTempRecords = [];
+
+        function formatDateInput(dateObj) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        window.applyPeriodPreset = function() {
+            const preset = document.getElementById('filter-period').value;
+            const startInput = document.getElementById('filter-date-start');
+            const endInput = document.getElementById('filter-date-end');
+            const now = new Date();
+
+            if (preset === 'all') {
+                startInput.value = '';
+                endInput.value = '';
+            } else if (preset === 'today') {
+                const todayStr = formatDateInput(now);
+                startInput.value = todayStr;
+                endInput.value = todayStr;
+            } else if (preset === '7d') {
+                const start = new Date(now);
+                start.setDate(now.getDate() - 6);
+                startInput.value = formatDateInput(start);
+                endInput.value = formatDateInput(now);
+            } else if (preset === '30d') {
+                const start = new Date(now);
+                start.setDate(now.getDate() - 29);
+                startInput.value = formatDateInput(start);
+                endInput.value = formatDateInput(now);
+            }
+            renderTempView();
+        };
+
+        window.onCustomDateChange = function() {
+            document.getElementById('filter-period').value = 'custom';
+            renderTempView();
+        };
+
+        window.resetTempFilters = function() {
+            document.getElementById('filter-period').value = 'all';
+            document.getElementById('filter-equipment').value = 'all';
+            document.getElementById('filter-compliance').value = 'all';
+            document.getElementById('filter-date-start').value = '';
+            document.getElementById('filter-date-end').value = '';
+            renderTempView();
+        };
+
+        function checkThreshold() {
+            const val = parseFloat(tempInput.value);
+            if (isNaN(val)) {
+                alertBox.classList.add('hidden');
+                correctiveSelect.required = false;
+                return true;
+            }
+            const selectedOption = eqSelect.options[eqSelect.selectedIndex];
+            const min = parseFloat(selectedOption.dataset.min);
+            const max = parseFloat(selectedOption.dataset.max);
+
+            if (val < min || val > max) {
+                alertBox.classList.remove('hidden');
+                correctiveSelect.required = true;
+                alertMsg.textContent = `La valeur saisie (${val}°C) est en dehors de la plage autorisée (${min}°C à ${max}°C).`;
+                return false;
+            } else {
+                alertBox.classList.add('hidden');
+                correctiveSelect.required = false;
+                correctiveSelect.value = "";
+                return true;
+            }
+        }
+
+        eqSelect.addEventListener('change', checkThreshold);
+        tempInput.addEventListener('input', checkThreshold);
+
+        document.getElementById('temp-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const isConforme = checkThreshold();
+            const selectedOption = eqSelect.options[eqSelect.selectedIndex];
+
+            const record = {
+                timestamp: new Date().toISOString(),
+                equipmentCode: eqSelect.value,
+                equipmentName: selectedOption.text.split('[')[0].trim(),
+                expectedRange: selectedOption.dataset.range,
+                temperature: parseFloat(tempInput.value),
+                operator: document.getElementById('operator-temp').value.trim(),
+                conforme: isConforme,
+                correctiveAction: isConforme ? null : correctiveSelect.value
+            };
+
+            await addDoc(collection(db, "temperatures"), record);
+            tempInput.value = "";
+            alertBox.classList.add('hidden');
+            correctiveSelect.value = "";
+        });
+
+        function getFilteredTempRecords() {
+            const eqFilter = document.getElementById('filter-equipment').value;
+            const complianceFilter = document.getElementById('filter-compliance').value;
+            const startStr = document.getElementById('filter-date-start').value;
+            const endStr = document.getElementById('filter-date-end').value;
+
+            const startDate = startStr ? new Date(startStr + 'T00:00:00') : null;
+            const endDate = endStr ? new Date(endStr + 'T23:59:59.999') : null;
+
+            return allTempRecords.filter(r => {
+                if (eqFilter !== 'all' && r.equipmentCode !== eqFilter) return false;
+                if (complianceFilter === 'non_conforme' && r.conforme) return false;
+                if (complianceFilter === 'conforme' && !r.conforme) return false;
+
+                const recDate = new Date(r.timestamp);
+                if (startDate && recDate < startDate) return false;
+                if (endDate && recDate > endDate) return false;
+
+                return true;
+            });
+        }
+
+        window.renderTempView = function() {
+            const filtered = getFilteredTempRecords();
+            const tbody = document.getElementById('temp-table-body');
+
+            const okCount = filtered.filter(r => r.conforme).length;
+            const koCount = filtered.length - okCount;
+
+            document.getElementById('stat-total').textContent = filtered.length;
+            document.getElementById('stat-ok').textContent = okCount;
+            document.getElementById('stat-ko').textContent = koCount;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-slate-400 text-center py-6">Aucun relevé sur cette période ou ce filtre.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(r => {
+                const date = new Date(r.timestamp);
+                const timeStr = date.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'2-digit'}) + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                const statusBadge = r.conforme
+                    ? '<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded">Conforme</span>'
+                    : '<span class="bg-red-100 text-red-800 text-xs font-extrabold px-2 py-0.5 rounded">Non conforme</span>';
+
+                return `
+                    <tr class="${r.conforme ? '' : 'non-conforme-row bg-red-50/50'}">
+                        <td class="p-2.5 whitespace-nowrap text-xs">${timeStr}</td>
+                        <td class="p-2.5 font-semibold text-slate-800">${r.equipmentName}</td>
+                        <td class="p-2.5 text-xs text-slate-500 whitespace-nowrap">${r.expectedRange || '-'}</td>
+                        <td class="p-2.5 font-extrabold whitespace-nowrap ${r.conforme ? 'text-emerald-700' : 'text-red-700'}">
+                            ${r.temperature > 0 ? '+' : ''}${r.temperature}°C
+                        </td>
+                        <td class="p-2.5 whitespace-nowrap">${statusBadge}</td>
+                        <td class="p-2.5 text-xs">${r.operator}</td>
+                        <td class="p-2.5 text-xs ${r.correctiveAction ? 'text-red-800 font-semibold' : 'text-slate-400'}">
+                            ${r.correctiveAction || '—'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        };
+
+        window.generateTempReport = function() {
+            const startStr = document.getElementById('filter-date-start').value;
+            const endStr = document.getElementById('filter-date-end').value;
+            const complianceFilter = document.getElementById('filter-compliance').value;
+
+            if (startStr && endStr && startStr > endStr) {
+                alert("La date de début doit être antérieure ou égale à la date de fin.");
+                return;
+            }
+
+            switchTab('temperatures');
+            renderTempView();
+
+            const eqLabel = document.getElementById('filter-equipment').selectedOptions[0].text;
+            const complianceLabel = document.getElementById('filter-compliance').selectedOptions[0].text;
+            const generatedAt = new Date().toLocaleString('fr-FR');
+
+            let periodText = "Tout l'historique";
+            if (startStr || endStr) {
+                const d1 = startStr ? new Date(startStr + 'T00:00:00').toLocaleDateString('fr-FR') : 'début';
+                const d2 = endStr ? new Date(endStr + 'T00:00:00').toLocaleDateString('fr-FR') : "aujourd'hui";
+                periodText = `Du ${d1} au ${d2}`;
+            }
+
+            document.getElementById('print-title').textContent = complianceFilter === 'non_conforme'
+                ? "Rapport des Non-Conformités & Actions Correctives — HACCP BABAM"
+                : "Rapport de Contrôle des Températures — HACCP BABAM";
+            document.getElementById('print-meta').textContent = `Édité le ${generatedAt} • Période : ${periodText} • Zone : ${eqLabel} • Filtre : ${complianceLabel}`;
+            window.print();
+        };
+
+        // ==========================================
+        // MODULE 2 : ÉTIQUETTES DLC + OCR + ZIP + PURGE COCHÉE
+        // ==========================================
+        let compressedLabelPhoto = null;
+        let cachedLabels = [];
+        let selectedDlcIds = new Set();
+        let dlcBackupVerifiedForCurrentSelection = false;
+
+        const labelPhotoInput = document.getElementById('label-photo');
+        const labelPhotoPreview = document.getElementById('label-photo-preview');
+        const labelPhotoPlaceholder = document.getElementById('label-photo-placeholder');
+        const labelOcrStatus = document.getElementById('label-ocr-status');
+
+        function matchesAgeScope(rawDate, scope) {
+            if (scope === 'all' || scope === 'all_archived') return true;
+            const now = Date.now();
+            const sixMonthsMs = 183 * 24 * 60 * 60 * 1000;
+            const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+            const recMs = rawDate ? new Date(rawDate).getTime() : now;
+            if (scope === 'older_6m') return (now - recMs) >= sixMonthsMs;
+            if (scope === 'older_30d') return (now - recMs) >= thirtyDaysMs;
+            return false;
+        }
+
+        function getVisibleArchivedDlc() {
+            const scope = document.getElementById('dlc-purge-scope').value;
+            return cachedLabels.filter(item =>
+                item.status === 'archived' && matchesAgeScope(item.openedAt || item.dlcDate, scope)
+            );
+        }
+
+        function getCheckedArchivedDlc() {
+            return cachedLabels.filter(item => item.status === 'archived' && selectedDlcIds.has(item.id));
+        }
+
+        function invalidateDlcBackupState(customMsg) {
+            dlcBackupVerifiedForCurrentSelection = false;
+            document.getElementById('dlc-purge-status-msg').textContent =
+                customMsg || "Étape 1 requise : cochez les DLC archivées puis créez l'archive .zip pour Google Drive afin de débloquer la purge.";
+        }
+
+        function renderDlcSelectionAndSummary() {
+            const archivedAll = cachedLabels.filter(item => item.status === 'archived');
+            const visibleArchived = getVisibleArchivedDlc();
+            const checkedTargets = getCheckedArchivedDlc();
+            const photoCount = checkedTargets.filter(t => Boolean(t.photo)).length;
+
+            document.getElementById('dlc-archived-badge').textContent = `${archivedAll.length} archivée(s)`;
+            document.getElementById('dlc-purge-target-count').textContent = checkedTargets.length;
+            document.getElementById('dlc-purge-photo-count').textContent = photoCount;
+
+            const purgeBtn = document.getElementById('purge-dlc-btn');
+            purgeBtn.disabled = !dlcBackupVerifiedForCurrentSelection || checkedTargets.length === 0;
+
+            const container = document.getElementById('dlc-archived-selection-list');
+            if (visibleArchived.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-xs text-center py-3">Aucune DLC archivée pour ce filtre.</p>';
+                return;
+            }
+
+            container.innerHTML = visibleArchived.map(item => {
+                const checkedAttr = selectedDlcIds.has(item.id) ? 'checked' : '';
+                const openDate = item.openedAt ? new Date(item.openedAt).toLocaleDateString('fr-FR') : '—';
+                const dlcDate = item.dlcDate ? new Date(item.dlcDate).toLocaleDateString('fr-FR') : '—';
+                const photoTag = item.photo ? ' • 📷 Photo' : '';
+
+                return `
+                    <label class="flex items-center justify-between gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <input type="checkbox" ${checkedAttr} onchange="toggleDlcSelection('${item.id}', this.checked)"
+                                class="w-4 h-4 accent-sky-700 rounded shrink-0" />
+                            <div class="truncate">
+                                <div class="text-xs font-bold text-slate-800 truncate">${item.productName}</div>
+                                <div class="text-[11px] text-slate-500">Ouvert le ${openDate} • DLC ${dlcDate} • ${item.operator || ''}${photoTag}</div>
+                            </div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        window.onDlcScopeChange = function() {
+            invalidateDlcBackupState();
+            renderDlcSelectionAndSummary();
+        };
+
+        window.toggleDlcSelection = function(docId, isChecked) {
+            if (isChecked) selectedDlcIds.add(docId);
+            else selectedDlcIds.delete(docId);
+            invalidateDlcBackupState();
+            renderDlcSelectionAndSummary();
+        };
+
+        window.setAllDlcSelection = function(checked) {
+            const visibleArchived = getVisibleArchivedDlc();
+            visibleArchived.forEach(item => {
+                if (checked) selectedDlcIds.add(item.id);
+                else selectedDlcIds.delete(item.id);
+            });
+            invalidateDlcBackupState();
+            renderDlcSelectionAndSummary();
+        };
+
+        window.backupDlcToDrive = async function() {
+            const targets = getCheckedArchivedDlc();
+            if (targets.length === 0) {
+                alert("Cochez au moins une DLC archivée à inclure dans l'archive .zip.");
+                return;
+            }
+
+            const btn = document.getElementById('backup-dlc-btn');
+            btn.disabled = true;
+            btn.textContent = "⏳ Compression .zip...";
+
+            try {
+                const { photoCount, zipFilename } = await createAndExportZipArchive(
+                    targets,
+                    "dlc",
+                    "Archive DLC HACCP BABAM",
+                    "Archive compressée DLC (JSON + photos) à enregistrer dans Google Drive."
+                );
+
+                dlcBackupVerifiedForCurrentSelection = true;
+                document.getElementById('dlc-purge-status-msg').textContent =
+                    `Archive ${zipFilename} créée (${targets.length} DLC cochée(s), ${photoCount} photo(s)). Déposez-la dans Google Drive puis cliquez sur "2. Purger DLC cochées".`;
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la création de l'archive .zip.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🗜️ 1. Créer archive .zip Drive";
+                renderDlcSelectionAndSummary();
+            }
+        };
+
+        window.purgeDlcFromFirestore = async function() {
+            const targets = getCheckedArchivedDlc();
+            if (!dlcBackupVerifiedForCurrentSelection || targets.length === 0) {
+                alert("Créez d'abord l'archive .zip des DLC cochées pour Google Drive.");
+                return;
+            }
+
+            const ok = confirm(
+                `Confirmez-vous la suppression définitive de ${targets.length} étiquette(s) DLC cochée(s) dans Firestore ?`
+            );
+            if (!ok) return;
+
+            const btn = document.getElementById('purge-dlc-btn');
+            btn.disabled = true;
+            btn.textContent = "⏳ Purge en cours...";
+
+            try {
+                for (const item of targets) {
+                    if (item.id) {
+                        await deleteDoc(doc(db, "labels", item.id));
+                        selectedDlcIds.delete(item.id);
+                    }
+                }
+                dlcBackupVerifiedForCurrentSelection = false;
+                document.getElementById('dlc-purge-status-msg').textContent =
+                    `Purge terminée : ${targets.length} DLC cochée(s) supprimée(s) de Firestore.`;
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la purge des DLC archivées.");
+            } finally {
+                btn.textContent = "🗑️ 2. Purger DLC cochées";
+                renderDlcSelectionAndSummary();
+            }
+        };
+
+        labelPhotoInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            compressedLabelPhoto = await compressImageFile(file);
+            labelPhotoPreview.src = compressedLabelPhoto;
+            labelPhotoPreview.classList.remove('hidden');
+            labelPhotoPlaceholder.classList.add('hidden');
+
+            await runOcrOnImage(compressedLabelPhoto, labelOcrStatus, ({ detectedDate, firstLines }) => {
+                if (detectedDate && !document.getElementById('detected-dlc-date').value) {
+                    document.getElementById('detected-dlc-date').value = detectedDate;
+                }
+                if (!document.getElementById('product-name').value && firstLines) {
+                    document.getElementById('product-name').placeholder = `Suggestion : ${firstLines.slice(0, 45)}`;
+                }
+            });
+        });
+
+        document.getElementById('label-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-label-btn');
+            btn.disabled = true;
+            btn.textContent = "⏳ Enregistrement...";
+
+            const daysToAdd = parseInt(document.getElementById('dlc-days').value);
+            const openDate = new Date();
+            const dlcDate = new Date();
+            dlcDate.setDate(openDate.getDate() + daysToAdd);
+
+            const labelRecord = {
+                productName: document.getElementById('product-name').value.trim(),
+                openedAt: openDate.toISOString(),
+                dlcDate: dlcDate.toISOString().split('T')[0],
+                detectedDlcDate: document.getElementById('detected-dlc-date').value || null,
+                dlcDays: daysToAdd,
+                operator: document.getElementById('operator-label').value.trim(),
+                photo: compressedLabelPhoto,
+                status: 'active'
+            };
+
+            await addDoc(collection(db, "labels"), labelRecord);
+            document.getElementById('product-name').value = "";
+            document.getElementById('detected-dlc-date').value = "";
+            labelPhotoInput.value = "";
+            compressedLabelPhoto = null;
+            labelPhotoPreview.classList.add('hidden');
+            labelPhotoPlaceholder.classList.remove('hidden');
+            labelOcrStatus.textContent = "";
+            btn.disabled = false;
+            btn.textContent = "🏷️ Enregistrer la traçabilité";
+        });
+
+        window.archiveLabel = async function(docId) {
+            if(confirm("Marquer ce produit comme terminé ou jeté ?")) {
+                await updateDoc(doc(db, "labels", docId), { status: 'archived' });
+            }
+        };
+
+        window.exportLabelPhotoToDrive = function(docId) {
+            const item = cachedLabels.find(x => x.id === docId);
+            if (!item || !item.photo) return;
+            const safeName = (item.productName || 'etiquette').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            savePhotoToDrive(item.photo, `dlc_${safeName}_${item.dlcDate}.jpg`);
+        };
+
+        // ==========================================
+        // MODULE 3 : TRAÇABILITÉ, ZIP & PURGE COCHÉE
+        // ==========================================
+        let compressedTracePhoto = null;
+        let cachedTrace = [];
+        let selectedTraceIds = new Set();
+        let traceBackupVerifiedForCurrentSelection = false;
+
+        const tracePhotoInput = document.getElementById('trace-photo');
+        const tracePhotoPreview = document.getElementById('trace-photo-preview');
+        const tracePhotoPlaceholder = document.getElementById('trace-photo-placeholder');
+        const traceOcrStatus = document.getElementById('trace-ocr-status');
+
+        function getVisibleTraceRecords() {
+            const scope = document.getElementById('purge-scope').value;
+            return cachedTrace.filter(item => matchesAgeScope(item.receivedAt, scope));
+        }
+
+        function getCheckedTraceRecords() {
+            return cachedTrace.filter(item => selectedTraceIds.has(item.id));
+        }
+
+        function invalidateTraceBackupState(customMsg) {
+            traceBackupVerifiedForCurrentSelection = false;
+            document.getElementById('purge-status-msg').textContent =
+                customMsg || "Étape 1 requise : cochez les entrées puis créez l'archive .zip pour Google Drive afin de débloquer la purge.";
+        }
+
+        function updateTracePurgeSummaryUI() {
+            const checkedTargets = getCheckedTraceRecords();
+            const photoCount = checkedTargets.filter(t => Boolean(t.photo)).length;
+            document.getElementById('trace-count-badge').textContent = `${cachedTrace.length} entrée(s)`;
+            document.getElementById('purge-target-count').textContent = checkedTargets.length;
+            document.getElementById('purge-photo-count').textContent = photoCount;
+
+            const purgeBtn = document.getElementById('purge-trace-btn');
+            purgeBtn.disabled = !traceBackupVerifiedForCurrentSelection || checkedTargets.length === 0;
+        }
+
+        function renderTraceList() {
+            const list = document.getElementById('trace-list');
+            const visibleItems = getVisibleTraceRecords();
+            updateTracePurgeSummaryUI();
+
+            if (cachedTrace.length === 0) {
+                list.innerHTML = '<p class="text-slate-400 text-sm text-center py-6">Aucune réception enregistrée.</p>';
+                return;
+            }
+
+            if (visibleItems.length === 0) {
+                list.innerHTML = '<p class="text-slate-400 text-sm text-center py-6">Aucune réception ne correspond à ce filtre.</p>';
+                return;
+            }
+
+            list.innerHTML = visibleItems.map(item => {
+                const recDate = new Date(item.receivedAt);
+                const dateStr = recDate.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' ' + recDate.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+                const isRefused = item.status === 'Refusé';
+                const isChecked = selectedTraceIds.has(item.id) ? 'checked' : '';
+                const statusBadge = isRefused
+                    ? '<span class="bg-red-100 text-red-800 text-xs font-extrabold px-2.5 py-1 rounded-lg">❌ Refusé</span>'
+                    : '<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-lg">✅ Accepté</span>';
+                const dlcInfo = item.dlc ? ` • DLC : <strong>${new Date(item.dlc).toLocaleDateString('fr-FR')}</strong>` : '';
+
+                const photoThumb = item.photo
+                    ? `<img src="${item.photo}" onclick="openPhotoModal('${item.photo}')" class="w-16 h-16 object-cover rounded-lg border border-slate-300 cursor-pointer shrink-0 shadow-sm" />`
+                    : `<div class="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400 text-xs text-center p-1 shrink-0">Sans photo</div>`;
+
+                const driveBtn = item.photo
+                    ? `<button onclick="exportTracePhotoToDrive('${item.id}')" class="bg-white hover:bg-sky-50 text-sky-700 border border-sky-300 text-xs font-bold py-2 px-2.5 rounded-lg shrink-0 shadow-sm">☁️ Drive</button>`
+                    : '';
+
+                return `
+                    <div class="p-3.5 rounded-xl border ${isRefused ? 'border-red-300 bg-red-50/40' : 'border-slate-200 bg-slate-50'} flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <input type="checkbox" ${isChecked} onchange="toggleTraceSelection('${item.id}', this.checked)"
+                                class="w-5 h-5 accent-sky-700 rounded shrink-0 cursor-pointer" />
+                            ${photoThumb}
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-800 text-base truncate">${item.product} <span class="text-xs font-normal text-slate-500">(${item.supplier})</span></div>
+                                <div class="text-xs text-slate-500 mb-1">Lot : <strong>${item.lot}</strong>${dlcInfo}</div>
+                                <div class="text-xs text-slate-500 mb-1.5">Reçu le ${dateStr} par <strong>${item.operator}</strong></div>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        ${driveBtn}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.onTraceScopeChange = function() {
+            invalidateTraceBackupState();
+            renderTraceList();
+        };
+
+        window.toggleTraceSelection = function(docId, isChecked) {
+            if (isChecked) selectedTraceIds.add(docId);
+            else selectedTraceIds.delete(docId);
+            invalidateTraceBackupState();
+            renderTraceList();
+        };
+
+        window.setAllTraceSelection = function(checked) {
+            const visibleItems = getVisibleTraceRecords();
+            visibleItems.forEach(item => {
+                if (checked) selectedTraceIds.add(item.id);
+                else selectedTraceIds.delete(item.id);
+            });
+            invalidateTraceBackupState();
+            renderTraceList();
+        };
+
+        window.backupTraceToDrive = async function() {
+            const targets = getCheckedTraceRecords();
+            if (targets.length === 0) {
+                alert("Cochez au moins une réception à inclure dans l'archive .zip.");
+                return;
+            }
+
+            const btn = document.getElementById('backup-trace-btn');
+            btn.disabled = true;
+            btn.textContent = "⏳ Compression .zip...";
+
+            try {
+                const { photoCount, zipFilename } = await createAndExportZipArchive(
+                    targets,
+                    "tracabilite",
+                    "Archive traçabilité HACCP BABAM",
+                    "Archive compressée traçabilité (JSON + photos) à enregistrer dans Google Drive."
+                );
+
+                traceBackupVerifiedForCurrentSelection = true;
+                document.getElementById('purge-status-msg').textContent =
+                    `Archive ${zipFilename} créée (${targets.length} entrée(s) cochée(s), ${photoCount} photo(s)). Déposez-la dans Google Drive puis cliquez sur "2. Purger entrées cochées".`;
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la création de l'archive .zip.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🗜️ 1. Créer archive .zip Drive";
+                updateTracePurgeSummaryUI();
+            }
+        };
+
+        window.purgeTraceFromFirestore = async function() {
+            const targets = getCheckedTraceRecords();
+            if (!traceBackupVerifiedForCurrentSelection || targets.length === 0) {
+                alert("Créez d'abord l'archive .zip des entrées cochées pour Google Drive.");
+                return;
+            }
+
+            const ok = confirm(
+                `Confirmez-vous la suppression définitive de ${targets.length} réception(s) cochée(s) dans Firestore ?\nAssurez-vous que l'archive .zip est bien enregistrée sur Google Drive.`
+            );
+            if (!ok) return;
+
+            const btn = document.getElementById('purge-trace-btn');
+            btn.disabled = true;
+            btn.textContent = "⏳ Purge en cours...";
+
+            try {
+                for (const item of targets) {
+                    if (item.id) {
+                        await deleteDoc(doc(db, "traceability", item.id));
+                        selectedTraceIds.delete(item.id);
+                    }
+                }
+                traceBackupVerifiedForCurrentSelection = false;
+                document.getElementById('purge-status-msg').textContent =
+                    `Purge terminée : ${targets.length} entrée(s) cochée(s) supprimée(s) de Firestore.`;
+            } catch (err) {
+                console.error(err);
+                alert("Erreur lors de la purge Firestore.");
+            } finally {
+                btn.textContent = "🗑️ 2. Purger entrées cochées";
+                updateTracePurgeSummaryUI();
+            }
+        };
+
+        tracePhotoInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            compressedTracePhoto = await compressImageFile(file);
+            tracePhotoPreview.src = compressedTracePhoto;
+            tracePhotoPreview.classList.remove('hidden');
+            tracePhotoPlaceholder.classList.add('hidden');
+
+            await runOcrOnImage(compressedTracePhoto, traceOcrStatus, ({ detectedDate, detectedLot }) => {
+                if (detectedDate && !document.getElementById('trace-dlc').value) {
+                    document.getElementById('trace-dlc').value = detectedDate;
+                }
+                if (detectedLot && !document.getElementById('trace-lot').value) {
+                    document.getElementById('trace-lot').value = detectedLot;
+                }
+            });
+        });
+
+        document.getElementById('trace-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submit-trace-btn');
+            btn.disabled = true;
+            btn.textContent = "⏳ Enregistrement...";
+
+            const traceRecord = {
+                receivedAt: new Date().toISOString(),
+                supplier: document.getElementById('trace-supplier').value.trim(),
+                product: document.getElementById('trace-product').value.trim(),
+                lot: document.getElementById('trace-lot').value.trim() || 'Non renseigné',
+                dlc: document.getElementById('trace-dlc').value || null,
+                status: document.getElementById('trace-status').value,
+                operator: document.getElementById('operator-trace').value.trim(),
+                photo: compressedTracePhoto
+            };
+
+            await addDoc(collection(db, "traceability"), traceRecord);
+            document.getElementById('trace-supplier').value = "";
+            document.getElementById('trace-product').value = "";
+            document.getElementById('trace-lot').value = "";
+            document.getElementById('trace-dlc').value = "";
+            tracePhotoInput.value = "";
+            compressedTracePhoto = null;
+            tracePhotoPreview.classList.add('hidden');
+            tracePhotoPlaceholder.classList.remove('hidden');
+            traceOcrStatus.textContent = "";
+            btn.disabled = false;
+            btn.textContent = "📦 Enregistrer la réception";
+        });
+
+        window.exportTracePhotoToDrive = function(docId) {
+            const item = cachedTrace.find(x => x.id === docId);
+            if (!item || !item.photo) return;
+            const safeName = (item.product || 'tracabilite').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            const datePart = item.receivedAt ? item.receivedAt.slice(0, 10) : 'date';
+            savePhotoToDrive(item.photo, `tracabilite_${safeName}_${datePart}.jpg`);
+        };
+
+        // ==========================================
+        // MODULE 4 : PLAN DE NETTOYAGE (PND)
+        // ==========================================
+        window.validateCleaning = async function(taskName) {
+            const operatorName = prompt("Entrez votre prénom pour valider ce nettoyage :");
+            if (!operatorName) return;
+
+            const cleaningRecord = {
+                taskName: taskName,
+                timestamp: new Date().toISOString(),
+                operator: operatorName.trim()
+            };
+
+            await addDoc(collection(db, "cleaning"), cleaningRecord);
+            alert("Nettoyage enregistré et synchronisé !");
+        };
+
+        function startFirestoreListeners() {
+            firestoreUnsubscribers.push(
+                onSnapshot(query(collection(db, "temperatures"), orderBy("timestamp", "desc")), (snapshot) => {
+                    allTempRecords = [];
+                    snapshot.forEach((doc) => allTempRecords.push({ id: doc.id, ...doc.data() }));
+                    renderTempView();
+                })
+            );
+
+            firestoreUnsubscribers.push(
+                onSnapshot(query(collection(db, "labels"), orderBy("openedAt", "desc")), (snapshot) => {
+                    const list = document.getElementById('labels-list');
+                    cachedLabels = [];
+                    const activeLabels = [];
+                    const validIds = new Set();
+
+                    snapshot.forEach((doc) => {
+                        const data = { id: doc.id, ...doc.data() };
+                        cachedLabels.push(data);
+                        validIds.add(data.id);
+                        if (data.status === 'active') activeLabels.push(data);
+                    });
+
+                    Array.from(selectedDlcIds).forEach(id => {
+                        if (!validIds.has(id)) selectedDlcIds.delete(id);
+                    });
+                    renderDlcSelectionAndSummary();
+
+                    if (activeLabels.length === 0) {
+                        list.innerHTML = '<p class="text-slate-400 text-sm text-center py-6">Aucun produit entamé en cours.</p>';
+                        return;
+                    }
+
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    list.innerHTML = activeLabels.map(item => {
+                        const openFormatted = new Date(item.openedAt).toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'});
+                        const dlcFormatted = new Date(item.dlcDate).toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
+                        const sourceDlcHtml = item.detectedDlcDate
+                            ? `<div class="text-xs text-slate-600 mb-1">DLC emballage : <strong>${new Date(item.detectedDlcDate).toLocaleDateString('fr-FR')}</strong></div>`
+                            : '';
+
+                        let statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-1 rounded-lg">DLC : ${dlcFormatted}</span>`;
+                        let cardBorder = "border-slate-200 bg-slate-50";
+
+                        if (item.dlcDate < todayStr) {
+                            statusBadge = `<span class="bg-red-600 text-white text-xs font-extrabold px-2.5 py-1 rounded-lg">⚠️ PÉRIMÉ (${dlcFormatted})</span>`;
+                            cardBorder = "border-red-400 bg-red-50";
+                        } else if (item.dlcDate === todayStr) {
+                            statusBadge = `<span class="bg-amber-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg">⏰ Expire aujourd'hui</span>`;
+                            cardBorder = "border-amber-300 bg-amber-50/50";
+                        }
+
+                        const photoThumb = item.photo
+                            ? `<img src="${item.photo}" onclick="openPhotoModal('${item.photo}')" class="w-16 h-16 object-cover rounded-lg border border-slate-300 cursor-pointer shrink-0 shadow-sm" />`
+                            : `<div class="w-16 h-16 bg-slate-200 rounded-lg flex items-center justify-center text-slate-400 text-xs text-center p-1 shrink-0">Sans photo</div>`;
+
+                        const driveBtn = item.photo
+                            ? `<button onclick="exportLabelPhotoToDrive('${item.id}')" class="bg-white hover:bg-sky-50 text-sky-700 border border-sky-300 text-xs font-bold py-2 px-2.5 rounded-lg shrink-0 shadow-sm">☁️ Drive</button>`
+                            : '';
+
+                        return `
+                            <div class="p-3.5 rounded-xl border ${cardBorder} flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-3">
+                                    ${photoThumb}
+                                    <div>
+                                        <div class="font-bold text-slate-800 text-base">${item.productName}</div>
+                                        <div class="text-xs text-slate-500 mb-1">Ouvert le ${openFormatted} par <strong>${item.operator}</strong></div>
+                                        ${sourceDlcHtml}
+                                        ${statusBadge}
+                                    </div>
+                                </div>
+                                <div class="flex flex-col sm:flex-row gap-1.5 shrink-0">
+                                    ${driveBtn}
+                                    <button onclick="archiveLabel('${item.id}')" class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 text-xs font-bold py-2 px-3 rounded-lg shadow-sm">
+                                        ✔️ Fini
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                })
+            );
+
+            firestoreUnsubscribers.push(
+                onSnapshot(query(collection(db, "traceability"), orderBy("receivedAt", "desc")), (snapshot) => {
+                    cachedTrace = [];
+                    const validIds = new Set();
+                    snapshot.forEach((doc) => {
+                        const data = { id: doc.id, ...doc.data() };
+                        cachedTrace.push(data);
+                        validIds.add(data.id);
+                    });
+
+                    Array.from(selectedTraceIds).forEach(id => {
+                        if (!validIds.has(id)) selectedTraceIds.delete(id);
+                    });
+                    renderTraceList();
+                })
+            );
+
+            firestoreUnsubscribers.push(
+                onSnapshot(query(collection(db, "cleaning"), orderBy("timestamp", "desc")), (snapshot) => {
+                    const list = document.getElementById('cleaning-list');
+                    const cleanings = [];
+                    snapshot.forEach((doc) => cleanings.push({ id: doc.id, ...doc.data() }));
+
+                    if (cleanings.length === 0) {
+                        list.innerHTML = '<p class="text-slate-400 text-sm text-center py-6">Aucun nettoyage enregistré.</p>';
+                        return;
+                    }
+
+                    list.innerHTML = cleanings.slice(0, 15).map(c => {
+                        const date = new Date(c.timestamp);
+                        const timeStr = date.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit'}) + ' à ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+                        return `
+                            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center text-sm">
+                                <div>
+                                    <span class="font-bold text-slate-800">🧽 ${c.taskName}</span>
+                                    <div class="text-xs text-slate-500">Fait par <strong>${c.operator}</strong> • ${timeStr}</div>
+                                </div>
+                                <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded">Validé</span>
+                            </div>
+                        `;
+                    }).join('');
+                })
+            );
+        }
+    </script>
+</body>
+</html>
